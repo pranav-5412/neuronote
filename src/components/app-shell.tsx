@@ -21,6 +21,18 @@ import { navigation } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { SearchCommand } from "@/components/search-command";
+import { useWorkspace } from "@/state/workspace-provider";
+function initials(name: string) {
+  return (
+    name
+      .trim()
+      .split(/\s+/)
+      .map((word) => word[0])
+      .slice(0, 2)
+      .join("")
+      .toUpperCase() || "N"
+  );
+}
 function SidebarContent({
   close,
   collapsed = false,
@@ -31,6 +43,7 @@ function SidebarContent({
   toggle?: () => void;
 }) {
   const pathname = usePathname();
+  const { profile } = useWorkspace();
   return (
     <>
       <Link href="/" className="brand" onClick={close}>
@@ -45,7 +58,9 @@ function SidebarContent({
       </Link>
       {!collapsed && (
         <div className="workspace-label">
-          <span className="workspace-avatar">P</span>
+          <span className="workspace-avatar">
+            {initials(profile.displayName)}
+          </span>
           <div>
             Personal workspace<small>Make room for a little more.</small>
           </div>
@@ -101,10 +116,10 @@ function SidebarContent({
           {!collapsed && "Settings"}
         </Link>
         <div className="profile">
-          <span className="avatar">PS</span>
+          <span className="avatar">{initials(profile.displayName)}</span>
           {!collapsed && (
             <div>
-              <strong>Pranav</strong>
+              <strong>{profile.displayName || "Student"}</strong>
               <small>Student · Personal</small>
             </div>
           )}
@@ -148,6 +163,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [mobile, setMobile] = useState(false);
   const mobileTrigger = useRef<HTMLButtonElement>(null);
   const pathname = usePathname();
+  const { profile } = useWorkspace();
   const current = navigation.find((item) => item.href === pathname);
   return (
     <div className={cn("app-shell", collapsed && "is-collapsed")}>
@@ -202,7 +218,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <SearchCommand />
           <div className="topbar-right">
             <span className="demo-badge">
-              <span /> Demo workspace
+              <span /> Private workspace
             </span>
             <ThemeToggle />
             <Link
@@ -210,7 +226,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               className="avatar small"
               aria-label="Profile settings"
             >
-              PS
+              {initials(profile.displayName)}
             </Link>
           </div>
         </header>

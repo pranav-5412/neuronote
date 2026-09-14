@@ -23,7 +23,12 @@ export const processingSteps = [
   "Generating questions",
   "Complete",
 ] as const;
-export type DocumentStatus = (typeof processingSteps)[number] | "Failed";
+export type DocumentStatus =
+  | (typeof processingSteps)[number]
+  | "Failed"
+  | "Uploaded"
+  | "Deleting"
+  | "Delete failed";
 export type FileType =
   "PDF" | "DOCX" | "PPTX" | "TXT" | "Markdown" | "Image" | "Pasted text";
 export interface Topic {
@@ -52,8 +57,6 @@ export interface StudyDocument {
   flashcards: number;
   quizzes: number;
   extractedText: string;
-  sourceText?: string;
-  simulateFailure: boolean;
   error?: string;
 }
 export interface WorkspaceState {
@@ -71,4 +74,15 @@ export interface BrainSummary extends Brain {
   concepts: number;
   flashcards: number;
   updated: string;
+}
+
+export interface UserProfile {
+  id: string;
+  displayName: string;
+  avatarUrl: string | null;
+  email: string;
+}
+export interface WorkspaceSnapshot {
+  state: WorkspaceState;
+  profile: UserProfile;
 }

@@ -9,8 +9,8 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 import { useWorkspace } from "@/state/workspace-provider";
-import { fileTypes } from "@/data/workspace-seed";
-import { processingSteps } from "@/types/workspace";
+import { fileTypes } from "@/data/workspace-options";
+
 import { Button } from "@/components/ui/button";
 import { EmptyPanel } from "@/components/shared/empty-panel";
 import { DocumentCollection } from "./document-collection";
@@ -173,7 +173,13 @@ export function DocumentLibrary({
               onChange={(event) => setStatus(event.target.value)}
             >
               <option value="all">Any status</option>
-              {[...processingSteps, "Failed"].map((status) => (
+              {[
+                "Uploaded",
+                "Uploading",
+                "Failed",
+                "Deleting",
+                "Delete failed",
+              ].map((status) => (
                 <option key={status}>{status}</option>
               ))}
             </select>
@@ -211,7 +217,7 @@ export function DocumentLibrary({
             Clear filters
           </button>
         )}
-        <span>Local demo · Resets on refresh</span>
+        <span>Private · Saved to your account</span>
       </div>
       {docs.length ? (
         <DocumentCollection documents={docs} view={view} />
@@ -225,7 +231,7 @@ export function DocumentLibrary({
           description={
             scope.length
               ? "Try another search or clear your filters."
-              : "Add your first document or paste your lecture notes. Everything stays in this browser session."
+              : "Add your first document or paste your lecture notes. Files are saved privately to your account."
           }
         >
           {scope.length ? (

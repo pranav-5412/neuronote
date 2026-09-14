@@ -2,93 +2,105 @@
 
 **A little curiosity. A connected mind.**
 
-An AI-powered second brain for students, starting with a carefully scoped frontend foundation. Phases 1–2 use frontend demo data only: no backend, authentication, storage service, file parsing, AI, or graph implementation.
+NeuroNote is a student second brain. Phase 3 replaces the earlier in-memory Brain/document demo with a Supabase foundation: email authentication, profiles, saved workspaces, document metadata, and private original files. The Phase 1/2 visual design and navigation are retained.
+
+**A Supabase project is required to use accounts and the workspace.** The project has been provisioned; local configuration lives in the ignored `.env.local`. AI, parsing, OCR, embeddings, RAG, the graph, study generation, and mastery/streak calculations remain future work.
 
 ## Run locally
 
-Requires Node.js 20.9 or later (verified with Node.js 24).
+Node.js 24 is recommended (used for verification).
 
 ```sh
 npm ci
+cp .env.example .env.local
+```
+
+Complete [the Supabase setup guide](docs/SUPABASE_SETUP.md), then run:
+
+```sh
 npm run dev
 ```
 
-Open http://localhost:3000. No environment variables or service credentials are needed.
+Open the exact address configured in `NEXT_PUBLIC_SITE_URL`. For the in-app browser, use `http://127.0.0.1:3000` consistently. For production mode, run `npm run build` followed by `npm start`. Rebuild and restart after changing public environment variables.
 
-## Phase 1
+## Implemented
 
-- Responsive application shell, collapsible desktop sidebar, focus-managed mobile drawer, and ten navigation destinations.
-- Dashboard with study statistics, overall mastery, streak, continuing study, subject workspaces, and recent activity.
-- Search with Command/Ctrl+K, keyboard navigation, subject/page matching, and no-result feedback.
-- Light, dark, and system appearance, persisted on the device.
-- Four mock brains, extended in Phase 2 with shared in-memory state that survives client navigation and resets on a full refresh.
-- Workspace summary pages; clear future-phase placeholders for study features.
-- Route loading skeleton, error recovery, not-found page, visible focus, skip link, reduced-motion support.
+- Email/password signup, email confirmation, login, logout, cookie session refresh, protected pages, safe redirects, and useful auth errors/loading.
+- Automatic profile creation and display-name editing. Avatar URL is reserved; avatar uploads are deferred.
+- Persistent Brain creation, listing, editing, and deletion. Nonempty brains cannot be deleted; move or delete documents first.
+- Private uploads and pasted text, server-side format/MIME/signature/size validation, metadata persistence, renaming, moving, deletion, and short-lived download links.
+- Real loading/error feedback. Partial uploads and failed deletions remain visible and recoverable. No simulated processing or fabricated study history is attached to real accounts.
+- Existing responsive shell, command search, theme settings, library filters, cards, and source preview placeholder. Original files can be downloaded; previews do not parse or render their contents yet.
 
-The small connected-node illustration is decorative SVG. XYFlow is intentionally not installed until the graph phase. Supabase, document parsing, and AI are intentionally not implemented.
+## Data and security
 
-## Phase 2
+Two ordered migrations define `profiles`, `brains`, `documents`, `document_chunks`, `concepts`, `concept_connections`, `notes`, `flashcards`, `flashcard_reviews`, `quizzes`, `quiz_questions`, `quiz_attempts`, and `mastery_records`. Only profiles, brains, and documents are actively used.
 
-- Brain creation with category, icon, optional description, duplicate-name validation, editing/renaming, and confirmed deletion.
-- Brain detail pages with Overview, Documents, Notes, Concepts, Flashcards, and Quizzes tabs; keyboard-accessible tab navigation and read-only study samples.
-- Document library with search, brain/type/status filters, sorting, grid/list views, and mobile filter controls.
-- Drag-and-drop and file-picker queues for PDF, DOCX, PPTX, TXT, Markdown, and PNG/JPG/WEBP/GIF images. Up to 20 non-empty files, 25 MB each. Pasted text is also supported.
-- A brain must be chosen before processing. Only metadata is retained for selected files; the app never reads file bytes, uploads files, or makes fake API calls. Pasted text stays in memory.
-- A shared timer advances the mock processing stages from Waiting through Complete. The optional first-file failure simulation and a seeded failed document provide reproducible retry flows. Processing continues across client navigation and stops when no active documents remain.
-- Viewer placeholder with page controls for known sample page counts, zoom, expanded fullscreen view, extracted-text panel, topics, concepts, and study-material counts. New file page counts remain unknown because no parsing happens.
-- Rename, move, delete, reprocess, retry, and open actions. Deletion and replacement of existing processed material require confirmation.
+All 13 tables have RLS and separate owner SELECT/INSERT/UPDATE/DELETE policies (52 policies). Composite foreign keys prevent linking child rows to another user's parents. Identity fields are immutable. Consistent database triggers maintain `updated_at`; the auth trigger creates profiles.
 
-### State and scope
+The `study-documents` bucket is private, limited to 25 MB and the supported MIME types. Three storage policies restrict reading, inserting, and deleting to owned document paths and permitted lifecycle states; there is no overwrite/update policy. Paths use `user UUID/document UUID/random UUID.extension`. Brain IDs are deliberately omitted so moving a document does not require a risky storage copy/delete.
 
-`WorkspaceState` normalizes brains, documents, topics, and concepts. Reducer actions maintain references: deleting a brain cascades to its documents and material; moving a document preserves its material; reprocessing replaces results without duplication. Resource totals are derived from records. Mastery, streaks, activity, reviews, notes, and quiz results are explicitly illustrative study history, not a real learning engine.
+Uploads create a metadata record before saving the file and only become `uploaded` after storage succeeds. Failed uploads are marked `upload_failed` before cleanup. Interrupted requests leave a visible row; after two minutes it can be deleted and uploaded again. Deletion marks the record, removes storage through its API, then deletes metadata. A database trigger blocks metadata deletion while storage still has the object. A failed step leaves a retryable row. This is compensating cleanup, not a distributed transaction or background repair worker.
 
-The provider owns session state; no persistence or real storage is added. Refreshing or opening a new browser tab resets to seed data. Future backend work can replace the provider/action boundary without changing the presentation components. Browser UUIDs and timestamps are created in event handlers, not during rendering or in the reducer.
+Deleting a source cascades its derived chunks; notes, flashcards, concepts, and quizzes retain their content with a nullable source reference. Deleting an empty brain removes its remaining associated study material, as the confirmation explains. Account deletion is intentionally restricted until owned data is cleaned up; no account-deletion UI is implemented.
 
-Sample results come from centralized fixtures and are not inferred from uploaded content. Pasted text is preserved across a reprocess. The actual flashcard/quiz engines and knowledge graph remain out of scope.
+Server-only repositories and services verify the session before data access and derive ownership from the authenticated user. RLS is an additional boundary. Browser code receives neither service credentials nor storage paths in workspace data. Downloads use authenticated routes and 60-second signed URLs; treat a signed URL as a temporary bearer link. A link already issued can work until it expires.
 
-## Stack and organization
-
-Next.js 16.3.5 (latest stable at setup), React 19, strict TypeScript, Tailwind CSS 4, shadcn/ui components generated with the official CLI and customized locally, Motion, Lucide, cmdk, and next-themes.
+## Architecture
 
 ```text
-src/app/                       App Router layout, pages, route states, global styles
-src/app/[section]/page.tsx      Validated section routes and page metadata
-src/components/app-shell.tsx    Navigation, header, mobile drawer, theme toggle
-src/components/search-command.tsx  Search palette
-src/components/dashboard/      Dashboard and reusable brain cards
-src/components/section-page.tsx Settings and future-phase pages
-src/components/ui/             Reusable Button, Dialog, Skeleton primitives
-src/components/providers.tsx   Theme, reduced-motion, and workspace providers
-src/data/mock-data.ts          Dashboard labels and historical sample activity
-src/data/workspace-seed.ts     Centralized subjects, source material, topics, concepts
-src/types/workspace.ts         Domain types and processing states
-src/state/                    Shared provider and pure workspace reducer
-src/components/brains/         Brain CRUD, detail tabs, and subject icons
-src/components/documents/      Library, queue, actions, simulation status, viewer
-src/components/shared/         Confirmation dialogs and empty panels
-src/lib/                       Navigation definitions and class-name helper
-tests/shell.spec.ts             Browser interaction and responsive regression tests
+src/app/(auth)/              Login/signup and loading
+src/app/(workspace)/         Protected layout, dashboard, section routes
+src/app/auth/confirm/        Email confirmation handler
+src/app/api/documents/      Authenticated multipart upload and download routes
+src/proxy.ts                Next.js 16 session refresh entry point
+src/lib/supabase/            Typed browser/server clients and cookie handling
+src/lib/repositories/        Verified session, workspace queries, mutations
+src/lib/services/            Document storage lifecycle and recovery
+src/lib/validation/          Forms, files, request size, origin checks
+src/actions/                Server action boundary
+src/state/                  Remote workspace snapshot, pending/error feedback
+src/types/database.ts       Generated database types, including relationships
+src/types/workspace.ts      UI/domain models
+src/components/             Existing reusable UI, auth, profile settings
+src/data/workspace-options.ts Static categories and future-study placeholders
+supabase/migrations/        Ordered schema, security, and storage SQL
+scripts/                    Local schema loader and type generation
 ```
 
-Mock records remain separate from the UI and `BrainCard` accepts a typed record. A later data layer can supply those records without adding fake API endpoints now. UI state belongs to client components; routing and metadata use server components. The dashboard consumes the same client store as the library so resource counts and brain cards stay consistent.
+The old mock reducer and seed persistence have been removed. Remaining static study examples are limited to future-feature presentation; real workspace data starts empty. The dashboard shows actual document totals, with study features explicitly pending.
 
 ## Verification
 
 ```sh
+npm run db:types
 npm run lint
 npm run typecheck
+npm run test:unit
 npm run build
 npx playwright install chromium
 npm run test:e2e
 npm run format:check
 ```
 
-Browser tests run against the production server at desktop (1440px), laptop (1280px), tablet (820px), and mobile (390px) widths. They cover navigation, horizontal overflow, theme persistence, console runtime errors, keyboard search, empty results, workspace validation, mobile focus restoration, sidebar collapse, and the continue-study placeholder. Phase 2 adds brain editing/deletion, library filters and sorting, upload validation, processing failure/retry, document moves, pasted-text preservation during reprocessing, viewer controls, missing records, and reducer referential-integrity checks. Tests use an isolated production server on port 3100. Screenshots are saved under ignored `test-results/` for visual review.
+`test:unit` runs migration-backed PostgreSQL tests in PGlite with minimal test-only Supabase auth/storage schemas. Tests exercise all 13 tables' cross-user isolation, insert spoofing, parent ownership, private storage policies, deletion order, timestamp triggers, file/request validation, and redirect validation. Lifecycle unit tests inject storage/metadata failures and verify recovery ordering.
 
-ESLint is pinned to 9.39.5 because the current Next.js React lint plugin uses APIs removed in ESLint 10. npm reports this release as deprecated; lint itself runs with zero warnings. Revisit the pin when the upstream config supports ESLint 10.
+These are **not hosted Supabase integration tests**: the fixtures do not run GoTrue, PostgREST, SMTP, or the actual Storage service. The guide contains the required two-account live acceptance checklist.
+
+Playwright runs the unconfigured app on port 3100 at desktop 1440px, laptop 1280px, tablet 820px, and mobile 390px. It checks auth routes, theme persistence, responsive overflow, runtime errors, expired confirmation, protected redirects, and rejected file requests. Build without Supabase variables for this offline suite; both runtime variables are cleared by its server configuration. Full authenticated workspace browser testing remains pending a project. Screenshots/traces are ignored under `test-results/`.
+
+Database types are generated from the actual ordered migrations applied to local PostgreSQL (no credentials needed), including nullability, defaults, enums, and public foreign keys. Regenerate when migrations change. Future migrations should be additive; do not edit an already-applied migration.
+
+ESLint remains pinned to 9.39.5 for compatibility with the Next.js plugin. Dependency installation may note that upstream deprecation; lint runs with zero warnings. If your shell sets both `NO_COLOR` and `FORCE_COLOR`, use `env -u NO_COLOR npm run test:e2e` to avoid Node's unrelated color-environment warning.
+
+## Deployment limits
+
+This upload endpoint requires a Node host/proxy accepting a 26 MB multipart body and at least a 120-second request window. Some serverless hosts impose smaller body limits; confirm your host's limits before deployment. Do not advertise 25 MB uploads on a host that cannot accept them. File signatures provide basic format screening, not full document validation or malware scanning. No deployment was performed.
+
+Workspace reads currently load the account's full Brain/document lists. Pagination and background cleanup are future scaling work. Uploaded files stay `uploaded`; no fake progress toward AI results is shown.
 
 ## Git workflow
 
 Public repository: https://github.com/pranav-5412/neuronote
 
-Complete and verify each phase, then wait for the owner to say **“ok”** or **“done”** before committing that phase. Phases 1 and 2 were approved by the owner.
+Verify each phase, then wait for the owner to say **“ok”** or **“done”** before committing that phase. Phase 3 is left uncommitted for review.

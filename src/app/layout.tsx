@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Providers } from "@/components/providers";
-import { AppShell } from "@/components/app-shell";
 import "./globals.css";
 import "./phase-two.css";
+import "./auth.css";
 export const metadata: Metadata = {
   title: {
     default: "NeuroNote — Your personal second brain",
@@ -19,9 +19,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
-        <Providers>
-          <AppShell>{children}</AppShell>
-        </Providers>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

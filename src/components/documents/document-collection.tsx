@@ -70,7 +70,7 @@ export function DocumentCollection({
           </div>
           <div className="document-state">
             <StatusBadge status={doc.status} />
-            {doc.status !== "Complete" && doc.status !== "Failed" && (
+            {(doc.status === "Uploading" || doc.status === "Deleting") && (
               <ProcessingProgress status={doc.status} />
             )}
             <DocumentActions document={doc} />

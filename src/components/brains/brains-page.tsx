@@ -36,7 +36,7 @@ export function BrainsPage() {
         ) : (
           <EmptyPanel
             title="This brain is no longer here."
-            description="It may have been deleted, or this browser session was refreshed."
+            description="It may have been deleted, or you may not have access to it."
           >
             <Button onClick={() => router.push("/my-brain")}>All brains</Button>
           </EmptyPanel>
@@ -62,7 +62,7 @@ export function BrainsPage() {
           <div className="workspace-strip">
             <Brain size={16} />
             <span>Your personal collection</span>
-            <span className="muted">Local demo · Resets on refresh</span>
+            <span className="muted">Your private workspaces</span>
           </div>
           {brains.length ? (
             <div className="brains-grid managed-brains">
@@ -116,10 +116,14 @@ export function BrainsPage() {
           if (!open) setDeleting(null);
         }}
         title={`Delete ${deleting?.name ?? "brain"}?`}
-        description="This removes the brain, all its documents, and associated demo study material from this session. This cannot be undone."
-        onConfirm={() => {
+        description="You must move or delete all documents first. Once empty, deleting this brain also removes its remaining study material. This cannot be undone."
+        onConfirm={async () => {
           if (deleting) {
-            dispatch({ type: "brain/delete", id: deleting.id });
+            const saved = await dispatch({
+              type: "brain/delete",
+              id: deleting.id,
+            });
+            if (!saved) return false;
             if (id === deleting.id) router.push("/my-brain");
           }
         }}

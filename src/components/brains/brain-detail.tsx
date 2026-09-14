@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { useWorkspace } from "@/state/workspace-provider";
 import type { BrainSummary } from "@/types/workspace";
-import { studyExamples } from "@/data/workspace-seed";
+import { studyExamples } from "@/data/workspace-options";
 import { Button } from "@/components/ui/button";
 import { EmptyPanel } from "@/components/shared/empty-panel";
 import { DocumentLibrary } from "@/components/documents/documents-page";
@@ -46,7 +46,9 @@ export function BrainDetail({
     ids.has(concept.documentId),
   );
   const weak = concepts.filter((concept) => concept.mastery < 50);
-  const completed = docs.filter((doc) => doc.status === "Complete");
+  const completed = docs.filter((doc) =>
+    ["Complete", "Uploaded"].includes(doc.status),
+  );
   const totalQuizzes = docs.reduce((sum, doc) => sum + doc.quizzes, 0);
   const conceptRows = (items: typeof concepts) => (
     <div className="concept-rows">
@@ -188,11 +190,11 @@ export function BrainDetail({
                 <p>
                   {completed.length
                     ? "Revisit the source, connect an idea, remember a little more."
-                    : "Your study material is still being prepared."}
+                    : "Your upload needs attention. Check the document status."}
                 </p>
                 <div className="resume-meta">
                   <Clock3 size={14} />
-                  Sample study session · {brain.mastery}% mastery
+                  Private source material
                 </div>
                 <Button asChild variant="outline">
                   <Link
@@ -220,8 +222,7 @@ export function BrainDetail({
                   <div style={{ width: `${brain.mastery}%` }} />
                 </div>
                 <p>
-                  Sample study history · Last studied{" "}
-                  {brain.updated.toLowerCase()}
+                  Study tracking arrives later · {brain.updated.toLowerCase()}
                 </p>
                 <div className="mastery-legend">
                   <span>
@@ -265,7 +266,7 @@ export function BrainDetail({
                 <p>
                   {brain.flashcards
                     ? studyExamples.reviewDue
-                    : "Processing will add sample study counts."}
+                    : "Flashcard generation arrives in a later phase."}
                 </p>
                 <Link className="text-link" href="/flashcards">
                   Explore flashcards
@@ -280,10 +281,7 @@ export function BrainDetail({
                 {concepts.length ? (
                   conceptRows(concepts.slice(0, 3))
                 ) : (
-                  <p>
-                    No concepts yet. Complete demo processing to see sample
-                    concepts.
-                  </p>
+                  <p>Concept extraction arrives in a later phase.</p>
                 )}
               </section>
               <section className="workspace-panel">
@@ -297,9 +295,7 @@ export function BrainDetail({
             </div>
             <div className="quiz-result">
               <div>
-                <span className="eyebrow">
-                  MOST RECENT QUIZ · SAMPLE RESULT
-                </span>
+                <span className="eyebrow">MOST RECENT QUIZ</span>
                 <h2>
                   {totalQuizzes
                     ? studyExamples.quizTitle
@@ -317,22 +313,25 @@ export function BrainDetail({
           <section className="workspace-panel">
             <div className="section-title">
               <h2>Ideas worth connecting</h2>
-              <span className="muted">{concepts.length} sample concepts</span>
+              <span className="muted">{concepts.length} concepts</span>
             </div>
             {concepts.length ? (
               conceptRows(concepts)
             ) : (
               <EmptyPanel
                 title="The first connections are on their way."
-                description="Complete a demo process to see sample concepts."
+                description="Concept extraction arrives in a later phase."
               />
             )}
           </section>
         ) : tab === "Notes" ? (
           <section className="workspace-panel">
             <span className="eyebrow">READ-ONLY STUDY PREVIEW</span>
-            <h2>{studyExamples.noteTitle}</h2>
-            <p>{studyExamples.noteBody}</p>
+            <h2>Notes, ready when you are</h2>
+            <p>
+              Your documents are saved. Note generation arrives in a later
+              phase.
+            </p>
             <div className="concept-rows">
               {concepts.slice(0, 3).map((concept) => (
                 <div key={concept.id}>
@@ -346,9 +345,7 @@ export function BrainDetail({
           </section>
         ) : (
           <section className="workspace-panel">
-            <span className="eyebrow">
-              SAMPLE STUDY MATERIAL · PRACTICE ARRIVES LATER
-            </span>
+            <span className="eyebrow">PRACTICE ARRIVES LATER</span>
             <h2>
               {tab === "Flashcards"
                 ? `${brain.flashcards} flashcards in this brain`
@@ -356,7 +353,7 @@ export function BrainDetail({
             </h2>
             <p>
               {tab === "Flashcards"
-                ? "A preview of what you’ll revisit. These cards are predefined samples."
+                ? "Flashcard generation and review sessions arrive in a later phase."
                 : "Quiz generation and interactive sessions are outside this phase."}
             </p>
             {tab === "Flashcards" ? (
@@ -371,11 +368,11 @@ export function BrainDetail({
               </div>
             ) : (
               <div className="quiz-result">
-                <h3>{studyExamples.quizTitle}</h3>
+                <h3>Your quiz results will appear here</h3>
                 <strong>
                   {totalQuizzes ? studyExamples.quizScore : "No results"}
                 </strong>
-                <span className="muted">Illustrative result</span>
+                <span className="muted">Practice arrives later</span>
               </div>
             )}
           </section>

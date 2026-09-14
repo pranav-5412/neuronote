@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useWorkspace } from "@/state/workspace-provider";
-import { categories, iconOptions } from "@/data/workspace-seed";
+import { categories, iconOptions } from "@/data/workspace-options";
 import type { Brain, BrainIcon } from "@/types/workspace";
 import { SubjectIcon } from "./subject-icon";
 export function BrainForm({
@@ -18,13 +18,13 @@ export function BrainForm({
   brain?: Brain;
   onClose: () => void;
 }) {
-  const { state, dispatch } = useWorkspace();
+  const { state, dispatch, busy } = useWorkspace();
   const [name, setName] = useState(brain?.name ?? "");
   const [category, setCategory] = useState(brain?.category ?? "Biology");
   const [icon, setIcon] = useState<BrainIcon>(brain?.icon ?? "leaf");
   const [description, setDescription] = useState(brain?.description ?? "");
   const [error, setError] = useState("");
-  function save(event: React.FormEvent) {
+  async function save(event: React.FormEvent) {
     event.preventDefault();
     if (!name.trim()) {
       setError("Give your brain a name to get started.");
@@ -40,21 +40,21 @@ export function BrainForm({
       setError("A brain with that name already exists.");
       return;
     }
-    dispatch({
+    const saved = await dispatch({
       type: "brain/save",
       brain: {
-        id: brain?.id ?? crypto.randomUUID(),
+        id: brain?.id,
         name: name.trim(),
         category,
         icon,
         description: description.trim(),
-        mastery: brain?.mastery ?? 0,
-        streak: brain?.streak ?? 0,
-        lastStudied: brain?.lastStudied ?? null,
-        tone: brain?.tone ?? "lilac",
       },
     });
-    onClose();
+    if (saved) onClose();
+    else
+      setError(
+        "Couldn’t save this brain. Check the workspace message and try again.",
+      );
   }
   return (
     <Dialog
@@ -68,7 +68,7 @@ export function BrainForm({
           {brain ? "Make it your own." : "Make room for a new interest."}
         </DialogTitle>
         <DialogDescription>
-          Your ideas, organized. Changes stay in this browser session.
+          Your ideas, organized and saved privately to your account.
         </DialogDescription>
         <form onSubmit={save} className="form-stack">
           <label>
@@ -128,7 +128,7 @@ export function BrainForm({
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit">
+            <Button type="submit" disabled={busy}>
               {brain ? "Save changes" : "Create brain"}
             </Button>
           </div>

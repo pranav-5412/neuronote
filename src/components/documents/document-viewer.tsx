@@ -11,17 +11,16 @@ import {
   Maximize,
   Minimize,
   FileText,
-  RefreshCw,
 } from "lucide-react";
 import { useWorkspace } from "@/state/workspace-provider";
-import { processingSteps } from "@/types/workspace";
+
 import { formatSize, formatDate } from "@/lib/document-utils";
 import { Button } from "@/components/ui/button";
 import { EmptyPanel } from "@/components/shared/empty-panel";
 import { DocumentActions } from "./document-actions";
-import { StatusBadge, ProcessingProgress } from "./status-badge";
+import { StatusBadge } from "./status-badge";
 export function DocumentViewer({ id }: { id: string }) {
-  const { state, dispatch } = useWorkspace();
+  const { state } = useWorkspace();
   const router = useRouter();
   const doc = state.documents.find((doc) => doc.id === id);
   const [page, setPage] = useState(1);
@@ -35,7 +34,7 @@ export function DocumentViewer({ id }: { id: string }) {
       <div className="section-page">
         <EmptyPanel
           title="This document is no longer here."
-          description="It may have been deleted, or this browser session was refreshed."
+          description="It may have been deleted or moved to another account."
         >
           <Button asChild>
             <Link href="/documents">Back to documents</Link>
@@ -49,7 +48,7 @@ export function DocumentViewer({ id }: { id: string }) {
   );
   const topics = state.topics.filter((topic) => topic.documentId === doc.id);
   const pages = doc.pages ?? 1;
-  const ready = doc.status === "Complete";
+  const ready = ["Complete", "Uploaded"].includes(doc.status);
   function toggleExpanded() {
     setExpanded((value) => !value);
     requestAnimationFrame(() => closeFullscreen.current?.focus());
@@ -170,7 +169,8 @@ export function DocumentViewer({ id }: { id: string }) {
                 </h3>
                 <p>
                   This is a document preview placeholder. The original file is
-                  not rendered or parsed in Phase 2.
+                  available to download. Rendering and text extraction arrive
+                  later.
                 </p>
                 <div className="paper-lines" aria-hidden="true">
                   <span />
@@ -180,11 +180,11 @@ export function DocumentViewer({ id }: { id: string }) {
                 </div>
                 <div className="paper-callout">
                   {ready
-                    ? "Sample topics and concepts are available in the side panel."
-                    : "Follow the simulated processing steps in the side panel."}
+                    ? "Your original file is stored privately."
+                    : "This upload needs attention. See its status in the side panel."}
                 </div>
                 <small>
-                  {doc.type} · {formatSize(doc.size)} · DEMO PREVIEW
+                  {doc.type} · {formatSize(doc.size)} · SOURCE FILE
                 </small>
               </div>
             ) : (
@@ -193,14 +193,10 @@ export function DocumentViewer({ id }: { id: string }) {
                 style={{ fontSize: `${zoom / 100}rem` }}
               >
                 <span className="inline-note">
-                  {doc.type === "Pasted text"
-                    ? "Your pasted text · Stored in memory for this session"
-                    : "Predefined sample text · Not extracted from the selected file"}
+                  Text extraction is planned for a later phase.
                 </span>
                 <pre>
-                  {ready
-                    ? doc.extractedText
-                    : "Text will appear when the demo process completes. No real extraction takes place."}
+                  Your original material is available using Download original.
                 </pre>
               </div>
             )}
@@ -259,45 +255,19 @@ export function DocumentViewer({ id }: { id: string }) {
               <dd>{doc.pages ?? "Unknown · no parsing"}</dd>
             </dl>
           </section>
-          {!ready && (
-            <section>
-              <h2>Processing timeline</h2>
-              <p className="inline-note">Frontend simulation</p>
-              <ProcessingProgress status={doc.status} />
-              {doc.status === "Failed" ? (
-                <>
-                  <p className="form-error">{doc.error}</p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      dispatch({ type: "document/reprocess", id: doc.id })
-                    }
-                  >
-                    <RefreshCw />
-                    Retry processing
-                  </Button>
-                </>
-              ) : (
-                <ol className="processing-timeline">
-                  {processingSteps.map((step, index) => (
-                    <li
-                      key={step}
-                      className={
-                        processingSteps.findIndex(
-                          (step) => step === doc.status,
-                        ) >= index
-                          ? "reached"
-                          : ""
-                      }
-                    >
-                      {step}
-                    </li>
-                  ))}
-                </ol>
-              )}
-            </section>
-          )}
+          <section>
+            {ready ? (
+              <Button asChild variant="outline">
+                <a href={`/api/documents/${doc.id}/download`}>
+                  Download original
+                </a>
+              </Button>
+            ) : (
+              <p className="form-error">
+                {doc.error || "This file is not ready to download."}
+              </p>
+            )}
+          </section>
           <section>
             <h2>Detected topics</h2>
             {topics.length ? (
@@ -322,7 +292,9 @@ export function DocumentViewer({ id }: { id: string }) {
                 </div>
               ))
             ) : (
-              <p className="muted">Sample concepts appear after processing.</p>
+              <p className="muted">
+                Concept extraction will be available in a later phase.
+              </p>
             )}
           </section>
           <section>
@@ -338,7 +310,7 @@ export function DocumentViewer({ id }: { id: string }) {
               </div>
             </div>
             <p className="inline-note">
-              Demo counts, not generated study sessions.
+              Study generation will be available in a later phase.
             </p>
           </section>
         </aside>

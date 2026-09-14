@@ -1,6 +1,5 @@
 "use client";
 import { ThemeProvider } from "next-themes";
-import { WorkspaceProvider } from "@/state/workspace-provider";
 import { MotionConfig } from "motion/react";
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -10,9 +9,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       enableSystem
       disableTransitionOnChange
     >
-      <MotionConfig reducedMotion="user">
-        <WorkspaceProvider>{children}</WorkspaceProvider>
-      </MotionConfig>
+      <MotionConfig reducedMotion="user">{children}</MotionConfig>
     </ThemeProvider>
   );
 }

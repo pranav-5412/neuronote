@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Pencil, Trash2, RefreshCw } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -18,14 +18,12 @@ export function DocumentActions({
   document: StudyDocument;
   onDelete?: () => void;
 }) {
-  const { state, dispatch } = useWorkspace();
-  const [action, setAction] = useState<"edit" | "delete" | "reprocess" | null>(
-    null,
-  );
+  const { state, dispatch, busy } = useWorkspace();
+  const [action, setAction] = useState<"edit" | "delete" | null>(null);
   const [name, setName] = useState(doc.name);
   const [brainId, setBrainId] = useState(doc.brainId);
   const [error, setError] = useState("");
-  function save(event: React.FormEvent) {
+  async function save(event: React.FormEvent) {
     event.preventDefault();
     if (!name.trim()) {
       setError("Enter a document name.");
@@ -42,12 +40,13 @@ export function DocumentActions({
       setError("A document with this name already exists in that brain.");
       return;
     }
-    dispatch({
+    const saved = await dispatch({
       type: "document/update",
       id: doc.id,
       patch: { name: name.trim(), brainId },
     });
-    setAction(null);
+    if (saved) setAction(null);
+    else setError("Couldn’t save this document. Please try again.");
   }
   return (
     <>
@@ -64,19 +63,6 @@ export function DocumentActions({
           }}
         >
           <Pencil />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label={`${doc.status === "Failed" ? "Retry" : "Reprocess"} ${doc.name}`}
-          disabled={doc.status !== "Complete" && doc.status !== "Failed"}
-          onClick={() => {
-            if (doc.status === "Failed")
-              dispatch({ type: "document/reprocess", id: doc.id });
-            else setAction("reprocess");
-          }}
-        >
-          <RefreshCw />
         </Button>
         <Button
           variant="ghost"
@@ -134,7 +120,9 @@ export function DocumentActions({
               >
                 Cancel
               </Button>
-              <Button type="submit">Save changes</Button>
+              <Button type="submit" disabled={busy}>
+                Save changes
+              </Button>
             </div>
           </form>
         </DialogContent>
@@ -145,21 +133,12 @@ export function DocumentActions({
           if (!open) setAction(null);
         }}
         title="Delete this document?"
-        description={`“${doc.name}” and its associated demo study material will be removed from this session. This cannot be undone.`}
-        onConfirm={() => {
-          dispatch({ type: "document/delete", id: doc.id });
-          onDelete?.();
+        description={`“${doc.name}” and its private file will be permanently removed. This cannot be undone.`}
+        onConfirm={async () => {
+          const saved = await dispatch({ type: "document/delete", id: doc.id });
+          if (saved) onDelete?.();
+          return saved;
         }}
-      />
-      <ConfirmDialog
-        open={action === "reprocess"}
-        onOpenChange={(open) => {
-          if (!open) setAction(null);
-        }}
-        title="Reprocess this document?"
-        description="This replaces the document’s existing demo text, concepts, and study counts with fresh sample results. No file is read and no AI service is called."
-        label="Reprocess"
-        onConfirm={() => dispatch({ type: "document/reprocess", id: doc.id })}
       />
     </>
   );

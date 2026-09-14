@@ -8,32 +8,41 @@ import {
   Layers,
   ListChecks,
   Flame,
-  Check,
-  Clock3,
-  Leaf,
   ArrowUpRight,
   Sparkles,
 } from "lucide-react";
-import {
-  stats as statLabels,
-  activities,
-  studySession,
-} from "@/data/mock-data";
 import { useWorkspace } from "@/state/workspace-provider";
 import { Button } from "@/components/ui/button";
 import { BrainCard } from "./brain-card";
 const statIcons = [Files, Network, Layers, ListChecks];
 export function Dashboard() {
-  const { brains, state } = useWorkspace();
+  const { brains, state, profile } = useWorkspace();
   const values = [
     state.documents.length,
     state.concepts.length,
     state.documents.reduce((sum, doc) => sum + doc.flashcards, 0),
     state.documents.reduce((sum, doc) => sum + doc.quizzes, 0),
   ];
-  const stats = statLabels.map((stat, index) => ({
-    ...stat,
-    value: String(values[index]),
+  const stats = ["Documents", "Concepts", "Flashcards", "Quizzes"].map(
+    (label, index) => ({
+      label,
+      value: values[index],
+      detail:
+        index === 0 ? "Private source material" : "Study tools arrive later",
+    }),
+  );
+  const recent = state.documents[0];
+  const activities = state.documents.slice(0, 4).map((doc) => ({
+    id: doc.id,
+    kind: "document",
+    title: doc.name,
+    description: "Added to your library",
+    brain: brains.find((brain) => brain.id === doc.brainId)?.name,
+    time: new Date(doc.uploadedAt).toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "short",
+      timeZone: "UTC",
+    }),
   }));
   return (
     <div className="dashboard">
@@ -41,9 +50,10 @@ export function Dashboard() {
         <div>
           <div className="eyebrow">YOUR SPACE TO CONNECT THE DOTS</div>
           <h1>
-            Good evening, Pranav <span className="wave">✳</span>
+            Welcome back, {profile.displayName || "curious mind"}{" "}
+            <span className="wave">✳</span>
           </h1>
-          <p>A little more connected than yesterday. Let’s keep it going.</p>
+          <p>A home for everything you’re learning.</p>
         </div>
         <Button asChild variant="outline">
           <Link href="/my-brain?new=true">
@@ -77,13 +87,11 @@ export function Dashboard() {
               Overall mastery
             </div>
             <div className="mastery-value">
-              <strong>
-                73<span>%</span>
-              </strong>
-              <span className="growth">+8% this week</span>
+              <strong>—</strong>
+              <span className="growth">Tracking arrives later</span>
             </div>
             <div className="progress-track">
-              <div style={{ width: "73%" }} />
+              <div style={{ width: "0%" }} />
             </div>
           </div>
         </div>
@@ -92,31 +100,25 @@ export function Dashboard() {
         <section className="continue-section" aria-labelledby="continue-title">
           <div className="section-title">
             <h2 id="continue-title">Pick up where you left off</h2>
-            <span className="subtle-label">
-              <Clock3 size={13} /> {studySession.minutes} min to a little more
-              clarity
-            </span>
           </div>
           <div className="continue-card">
             <div className="continue-copy">
-              <span className="subject-label">
-                <Leaf size={14} />
-                BIOLOGY <span> / </span> CHAPTER 06
-              </span>
-              <h3>{studySession.title}</h3>
-              <p>{studySession.subtitle}</p>
-              <div className="session-progress">
-                <div className="progress-track">
-                  <div style={{ width: "75%" }} />
-                </div>
-                <span>
-                  {studySession.reviewed} of {studySession.total} flashcards
-                  reviewed
-                </span>
-              </div>
+              <span className="subject-label">YOUR STUDY MATERIAL</span>
+              <h3>{recent?.name || "Make room for your next idea."}</h3>
+              <p>
+                {recent
+                  ? "Open your latest source material and keep exploring."
+                  : "Create a brain, then add your first document."}
+              </p>
               <Button asChild>
-                <Link href="/flashcards?topic=tissues">
-                  Continue studying
+                <Link
+                  href={
+                    recent
+                      ? `/documents?document=${recent.id}`
+                      : "/my-brain?new=true"
+                  }
+                >
+                  {recent ? "Open document" : "Create your first brain"}
                   <ArrowRight />
                 </Link>
               </Button>
@@ -175,23 +177,14 @@ export function Dashboard() {
             <span>KEEP SHOWING UP</span>
           </div>
           <h2 id="streak-title">
-            7 day streak<span>Looking good.</span>
+            — day streak<span>A fresh beginning.</span>
           </h2>
           <p>
             You’re building more than knowledge.
             <br />
             You’re building a habit.
           </p>
-          <div className="streak-days">
-            {["M", "T", "W", "T", "F", "S", "S"].map((day, index) => (
-              <div key={index}>
-                <span>{day}</span>
-                <span className={index === 6 ? "today" : ""}>
-                  {index === 6 ? <Flame size={13} /> : <Check size={13} />}
-                </span>
-              </div>
-            ))}
-          </div>
+          <p>Streak tracking arrives with study sessions.</p>
           <small>A little today. A stronger tomorrow.</small>
         </section>
       </div>
@@ -207,6 +200,11 @@ export function Dashboard() {
           </Link>
         </div>
         <div className="brains-grid">
+          {!brains.length && (
+            <p className="muted">
+              Your brains will appear here. Start with a subject you love.
+            </p>
+          )}
           {brains.map((brain) => (
             <BrainCard key={brain.id} brain={brain} />
           ))}
@@ -218,6 +216,11 @@ export function Dashboard() {
           <span className="subtle-label">Your learning, in motion</span>
         </div>
         <div className="activity-list">
+          {!activities.length && (
+            <p className="muted">
+              Add a document to start your learning story.
+            </p>
+          )}
           {activities.map((activity) => {
             const Icon =
               activity.kind === "flashcards"
@@ -227,7 +230,7 @@ export function Dashboard() {
                   : Files;
             return (
               <Link
-                href={`/${activity.kind === "document" ? "documents" : activity.kind === "quiz" ? "quizzes" : "flashcards"}`}
+                href={`/documents?document=${activity.id}`}
                 key={activity.id}
                 className="activity-item"
               >

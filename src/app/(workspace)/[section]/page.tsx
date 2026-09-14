@@ -5,11 +5,6 @@ import { SectionPage } from "@/components/section-page";
 import { BrainsPage } from "@/components/brains/brains-page";
 import { DocumentsPage } from "@/components/documents/documents-page";
 import Loading from "@/app/loading";
-export function generateStaticParams() {
-  return navigation
-    .filter((item) => item.href !== "/")
-    .map((item) => ({ section: item.href.slice(1) }));
-}
 export async function generateMetadata({
   params,
 }: {

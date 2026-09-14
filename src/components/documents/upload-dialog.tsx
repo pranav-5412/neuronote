@@ -9,17 +9,22 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useWorkspace } from "@/state/workspace-provider";
-import type { StudyDocument } from "@/types/workspace";
+
 import {
   fileAccept,
   fileType,
   formatSize,
   MAX_FILE_SIZE,
 } from "@/lib/document-utils";
-type QueuedDocument = Pick<
-  StudyDocument,
-  "id" | "name" | "type" | "size" | "extractedText"
->;
+type QueuedDocument = {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  file: File;
+  pasted?: boolean;
+  status: string;
+};
 export function UploadDialog({
   onClose,
   initialBrainId,
@@ -27,7 +32,7 @@ export function UploadDialog({
   onClose: () => void;
   initialBrainId?: string;
 }) {
-  const { state, dispatch } = useWorkspace();
+  const { state, refresh } = useWorkspace();
   const [brainId, setBrainId] = useState(
     initialBrainId ?? state.brains[0]?.id ?? "",
   );
@@ -37,7 +42,7 @@ export function UploadDialog({
   const [text, setText] = useState("");
   const [title, setTitle] = useState("");
   const [drag, setDrag] = useState(false);
-  const [fail, setFail] = useState(false);
+  const [pending, setPending] = useState(false);
   const input = useRef<HTMLInputElement>(null);
   function addFiles(files: File[]) {
     const next: QueuedDocument[] = [];
@@ -68,7 +73,8 @@ export function UploadDialog({
         name: file.name,
         type,
         size: file.size,
-        extractedText: "",
+        file,
+        status: "Waiting",
       });
     }
     setQueue((value) => [...value, ...next]);
@@ -90,50 +96,82 @@ export function UploadDialog({
         name: title.trim(),
         type: "Pasted text",
         size: new Blob([text]).size,
-        extractedText: text.trim(),
+        file: new File(
+          [text.trim()],
+          `${title.trim().replace(/[\\/]/g, "-")}.txt`,
+          { type: "text/plain" },
+        ),
+        pasted: true,
+        status: "Waiting",
       },
     ]);
     setTitle("");
     setText("");
     setErrors([]);
   }
-  function start() {
-    if (!state.brains.some((brain) => brain.id === brainId) || !queue.length)
-      return;
-    const now = new Date().toISOString();
-    dispatch({
-      type: "document/add",
-      documents: queue.map((doc, index) => ({
-        ...doc,
-        sourceText: doc.type === "Pasted text" ? doc.extractedText : undefined,
-        brainId,
-        pages: null,
-        uploadedAt: now,
-        status: "Waiting",
-        flashcards: 0,
-        quizzes: 0,
-        simulateFailure: fail && index === 0,
-      })),
-    });
-    onClose();
+  async function start() {
+    if (pending || !brainId) return;
+    setPending(true);
+    setErrors([]);
+    for (const doc of queue.filter((item) => item.status === "Waiting")) {
+      setQueue((items) =>
+        items.map((item) =>
+          item.id === doc.id ? { ...item, status: "Uploading" } : item,
+        ),
+      );
+      const body = new FormData();
+      body.set("file", doc.file);
+      body.set("brainId", brainId);
+      body.set("pasted", String(!!doc.pasted));
+      try {
+        const response = await fetch("/api/documents/upload", {
+          method: "POST",
+          body,
+        });
+        const result = await response.json();
+        if (!response.ok)
+          throw new Error(
+            result.error ||
+              "Upload failed. Check the library before uploading again.",
+          );
+        setQueue((items) =>
+          items.map((item) =>
+            item.id === doc.id ? { ...item, status: "Uploaded" } : item,
+          ),
+        );
+      } catch (error) {
+        setQueue((items) =>
+          items.map((item) =>
+            item.id === doc.id ? { ...item, status: "Failed" } : item,
+          ),
+        );
+        setErrors((items) => [
+          ...items,
+          `${doc.name}: ${error instanceof Error ? error.message : "Upload failed."}`,
+        ]);
+      }
+    }
+    await refresh();
+    setPending(false);
   }
   return (
     <Dialog
       open
       onOpenChange={(open) => {
-        if (!open) onClose();
+        if (!open && !pending) onClose();
       }}
     >
       <DialogContent className="phase-dialog upload-dialog">
         <DialogTitle>Give your ideas a starting point.</DialogTitle>
         <DialogDescription>
-          Add study material to your brain. Files stay on your device;
-          processing and results are simulated.
+          Store study material privately in your brain. Text extraction and AI
+          study tools arrive in a later phase.
         </DialogDescription>
         <div className="form-stack">
           <label>
             Add to brain
             <select
+              disabled={pending}
               value={brainId}
               onChange={(event) => setBrainId(event.target.value)}
             >
@@ -177,13 +215,18 @@ export function UploadDialog({
               onDrop={(event) => {
                 event.preventDefault();
                 setDrag(false);
+                if (pending) return;
                 addFiles(Array.from(event.dataTransfer.files));
               }}
             >
               <Upload size={28} />
               <strong>Drop a little knowledge here</strong>
               <p>or choose files from your device</p>
-              <Button variant="outline" onClick={() => input.current?.click()}>
+              <Button
+                variant="outline"
+                disabled={pending}
+                onClick={() => input.current?.click()}
+              >
                 Browse files
               </Button>
               <input
@@ -225,7 +268,7 @@ export function UploadDialog({
                   placeholder="Paste your study material…"
                 />
               </label>
-              <Button variant="outline" onClick={addText}>
+              <Button variant="outline" disabled={pending} onClick={addText}>
                 <Plus />
                 Add text to queue
               </Button>
@@ -252,10 +295,11 @@ export function UploadDialog({
                       {doc.type} · {formatSize(doc.size)}
                     </small>
                   </div>
-                  <span className="muted">Waiting</span>
+                  <span className="muted">{doc.status}</span>
                   <Button
                     variant="ghost"
                     size="icon"
+                    disabled={pending}
                     aria-label={`Remove ${doc.name}`}
                     onClick={() =>
                       setQueue((items) =>
@@ -269,21 +313,19 @@ export function UploadDialog({
               ))}
             </div>
           )}
-          <label className="checkbox-label">
-            <input
-              type="checkbox"
-              checked={fail}
-              onChange={(event) => setFail(event.target.checked)}
-            />
-            Simulate a failure on the first document{" "}
-            <span className="muted">(demo)</span>
-          </label>
           <div className="form-actions">
-            <Button variant="outline" onClick={onClose}>
+            <Button variant="outline" disabled={pending} onClick={onClose}>
               Cancel
             </Button>
-            <Button disabled={!queue.length || !brainId} onClick={start}>
-              Start demo processing
+            <Button
+              disabled={
+                pending ||
+                !queue.some((item) => item.status === "Waiting") ||
+                !brainId
+              }
+              onClick={start}
+            >
+              {pending ? "Uploading…" : "Upload material"}
               {queue.length > 0 ? ` · ${queue.length}` : ""}
             </Button>
           </div>

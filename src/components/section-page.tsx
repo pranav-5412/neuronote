@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useTheme } from "next-themes";
 import { ArrowLeft, Check, Monitor, Sun, Moon } from "lucide-react";
 import { navigation } from "@/lib/navigation";
+import { ProfileSettings } from "@/components/settings/profile-settings";
 import { Button } from "@/components/ui/button";
 const descriptions: Record<string, string> = {
   documents: "A home for the material that starts it all.",
@@ -29,7 +30,7 @@ const placeholders: Record<string, [string, string]> = {
   ],
   flashcards: [
     "Your next recall moment awaits",
-    "Flashcard review is planned for a later phase. Your Biology · Tissues session is sample data for the application shell.",
+    "Flashcard generation and spaced review arrive in a later phase. Your original study files are ready in Documents.",
   ],
   quizzes: [
     "Turn a little practice into confidence",
@@ -37,7 +38,7 @@ const placeholders: Record<string, [string, string]> = {
   ],
   progress: [
     "Every small step will have a place",
-    "Detailed mastery and learning history will arrive in a later phase. Dashboard statistics are illustrative mock data.",
+    "Detailed mastery, streaks, and learning history arrive with study sessions. Document counts reflect your saved library.",
   ],
   "ai-tutor": [
     "A thoughtful study partner, coming soon",
@@ -67,35 +68,40 @@ export function SectionPage({ section }: { section: string }) {
         </div>
       </div>
       {section === "settings" ? (
-        <div className="settings-card">
-          <h2>Appearance</h2>
-          <p>Choose the light that helps you think.</p>
-          <div className="theme-options">
-            {[
-              { id: "light", label: "Light", icon: Sun },
-              { id: "dark", label: "Dark", icon: Moon },
-              { id: "system", label: "System", icon: Monitor },
-            ].map((option) => (
-              <button
-                key={option.id}
-                onClick={() => setTheme(option.id)}
-                className="theme-option"
-                aria-label={`${option.label} theme`}
-                aria-pressed={mounted && theme === option.id}
-              >
-                <option.icon size={22} />
-                <span>{option.label}</span>
-                <span className="theme-check">
-                  {mounted && theme === option.id ? <Check size={16} /> : null}
-                </span>
-              </button>
-            ))}
+        <>
+          <ProfileSettings />
+          <div className="settings-card">
+            <h2>Appearance</h2>
+            <p>Choose the light that helps you think.</p>
+            <div className="theme-options">
+              {[
+                { id: "light", label: "Light", icon: Sun },
+                { id: "dark", label: "Dark", icon: Moon },
+                { id: "system", label: "System", icon: Monitor },
+              ].map((option) => (
+                <button
+                  key={option.id}
+                  onClick={() => setTheme(option.id)}
+                  className="theme-option"
+                  aria-label={`${option.label} theme`}
+                  aria-pressed={mounted && theme === option.id}
+                >
+                  <option.icon size={22} />
+                  <span>{option.label}</span>
+                  <span className="theme-check">
+                    {mounted && theme === option.id ? (
+                      <Check size={16} />
+                    ) : null}
+                  </span>
+                </button>
+              ))}
+            </div>
+            <div className="preview-note mt-6">
+              Theme preferences are saved on this device. Your account details
+              are saved securely.
+            </div>
           </div>
-          <div className="preview-note mt-6">
-            Theme preferences are saved on this device. Account settings will
-            arrive with authentication in a later phase.
-          </div>
-        </div>
+        </>
       ) : (
         <div className="empty-state">
           <span className="empty-icon">

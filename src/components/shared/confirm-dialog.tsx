@@ -1,4 +1,5 @@
 "use client";
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -18,32 +19,62 @@ export function ConfirmDialog({
   onOpenChange: (open: boolean) => void;
   title: string;
   description: string;
-  onConfirm: () => void;
+  onConfirm: () => void | boolean | Promise<void | boolean>;
   label?: string;
 }) {
+  const [pending, setPending] = useState(false);
+  const [failed, setFailed] = useState(false);
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(value) => {
+        if (!pending) {
+          setFailed(false);
+          onOpenChange(value);
+        }
+      }}
+    >
       <DialogContent>
         <DialogTitle>{title}</DialogTitle>
         <DialogDescription className="leading-relaxed">
           {description}
         </DialogDescription>
+        {failed && (
+          <p className="form-error" role="alert">
+            The action couldn’t finish. Close this dialog to see the workspace
+            message, then try again.
+          </p>
+        )}
         <div className="flex justify-end gap-2">
           <Button
             variant="outline"
-            onClick={() => onOpenChange(false)}
+            disabled={pending}
+            onClick={() => {
+              setFailed(false);
+              onOpenChange(false);
+            }}
             autoFocus
           >
             Cancel
           </Button>
           <Button
             variant={label === "Delete" ? "destructive" : "default"}
-            onClick={() => {
-              onConfirm();
-              onOpenChange(false);
+            disabled={pending}
+            onClick={async () => {
+              setPending(true);
+              setFailed(false);
+              try {
+                const result = await onConfirm();
+                if (result !== false) onOpenChange(false);
+                else setFailed(true);
+              } catch {
+                setFailed(true);
+              } finally {
+                setPending(false);
+              }
             }}
           >
-            {label}
+            {pending ? "Working…" : label}
           </Button>
         </div>
       </DialogContent>
