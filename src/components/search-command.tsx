@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { Command } from "cmdk";
 import { Search, ArrowUpRight, Brain } from "lucide-react";
 import { navigation } from "@/lib/navigation";
-import { brains } from "@/data/mock-data";
+import { useWorkspace } from "@/state/workspace-provider";
 import {
   Dialog,
   DialogContent,
@@ -12,6 +12,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 export function SearchCommand() {
+  const { brains } = useWorkspace();
   const [open, setOpen] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
   const router = useRouter();

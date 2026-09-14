@@ -1,3 +1,4 @@
+"use client";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -13,11 +14,27 @@ import {
   ArrowUpRight,
   Sparkles,
 } from "lucide-react";
-import { brains, stats, activities, studySession } from "@/data/mock-data";
+import {
+  stats as statLabels,
+  activities,
+  studySession,
+} from "@/data/mock-data";
+import { useWorkspace } from "@/state/workspace-provider";
 import { Button } from "@/components/ui/button";
 import { BrainCard } from "./brain-card";
 const statIcons = [Files, Network, Layers, ListChecks];
 export function Dashboard() {
+  const { brains, state } = useWorkspace();
+  const values = [
+    state.documents.length,
+    state.concepts.length,
+    state.documents.reduce((sum, doc) => sum + doc.flashcards, 0),
+    state.documents.reduce((sum, doc) => sum + doc.quizzes, 0),
+  ];
+  const stats = statLabels.map((stat, index) => ({
+    ...stat,
+    value: String(values[index]),
+  }));
   return (
     <div className="dashboard">
       <div className="page-heading">
@@ -182,7 +199,7 @@ export function Dashboard() {
         <div className="section-title">
           <div className="flex items-center gap-2">
             <h2 id="brains-title">Your brains</h2>
-            <span className="count-pill">4</span>
+            <span className="count-pill">{brains.length}</span>
           </div>
           <Link className="text-link" href="/my-brain">
             View all brains

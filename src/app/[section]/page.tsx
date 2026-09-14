@@ -2,6 +2,8 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { navigation } from "@/lib/navigation";
 import { SectionPage } from "@/components/section-page";
+import { BrainsPage } from "@/components/brains/brains-page";
+import { DocumentsPage } from "@/components/documents/documents-page";
 import Loading from "@/app/loading";
 export function generateStaticParams() {
   return navigation
@@ -29,7 +31,13 @@ export default async function Page({
   if (!navigation.some((item) => item.href === `/${section}`)) notFound();
   return (
     <Suspense fallback={<Loading />}>
-      <SectionPage section={section} />
+      {section === "my-brain" ? (
+        <BrainsPage />
+      ) : section === "documents" ? (
+        <DocumentsPage />
+      ) : (
+        <SectionPage section={section} />
+      )}
     </Suspense>
   );
 }

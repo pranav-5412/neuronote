@@ -1403,7 +1403,7 @@ h2 {
     scroll-behavior: auto !important;
   }
 }
-@media (max-height: 790px) and (min-width: 768px) {
+@media (max-height: 900px) and (min-width: 768px) {
   .sidebar-note {
     display: none;
   }
@@ -1460,4 +1460,11 @@ h2 {
     max-width: 48px;
     line-height: 1.6;
   }
+}
+
+.desktop-sidebar {
+  overflow-y: auto;
+}
+.desktop-sidebar > * {
+  flex-shrink: 0;
 }

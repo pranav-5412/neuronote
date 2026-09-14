@@ -65,7 +65,7 @@ test("search supports keyboard navigation and empty results", async ({
   await expect(page).toHaveURL(/my-brain\?brain=physics/);
   await expect(
     page.getByRole("heading", { name: "Physics", exact: true }),
-  ).toHaveCount(2);
+  ).toBeVisible();
 });
 test("workspace creation validates and shows a useful empty brain", async ({
   page,
