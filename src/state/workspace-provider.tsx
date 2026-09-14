@@ -1,5 +1,12 @@
 "use client";
-import { createContext, useContext, useMemo, useState, useRef } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+  useRef,
+} from "react";
 import { loadWorkspace, mutateWorkspace } from "@/actions/workspace";
 import type {
   BrainSummary,
@@ -30,7 +37,7 @@ export function WorkspaceProvider({
   const [error, setError] = useState("");
   const latest = useRef(0);
   const mutationLock = useRef(false);
-  async function refresh() {
+  const refresh = useCallback(async () => {
     const version = ++latest.current;
     try {
       const result = await loadWorkspace();
@@ -46,7 +53,7 @@ export function WorkspaceProvider({
       );
     }
     return false;
-  }
+  }, []);
   async function dispatch(action: WorkspaceAction) {
     if (mutationLock.current) return false;
     mutationLock.current = true;

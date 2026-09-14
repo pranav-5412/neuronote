@@ -2,7 +2,10 @@ import { Check, CircleAlert, LoaderCircle } from "lucide-react";
 import type { DocumentStatus } from "@/types/workspace";
 export function StatusBadge({ status }: { status: DocumentStatus }) {
   const ready = status === "Complete" || status === "Uploaded";
-  const failed = status === "Failed" || status === "Delete failed";
+  const failed =
+    status === "Failed" ||
+    status === "Delete failed" ||
+    status === "Unsupported";
   const Icon = ready ? Check : failed ? CircleAlert : LoaderCircle;
   return (
     <span
@@ -21,7 +24,7 @@ export function ProcessingProgress({ status }: { status: DocumentStatus }) {
       aria-label={status}
       aria-valuetext={status}
     >
-      <div style={{ width: "35%" }} />
+      <div className="indeterminate" />
     </div>
   );
 }

@@ -12,21 +12,21 @@ export interface Brain {
   tone: "sage" | "sand" | "lilac" | "rose";
 }
 export const processingSteps = [
-  "Waiting",
   "Uploading",
+  "Uploaded",
+  "Validating",
   "Extracting text",
+  "Cleaning text",
   "Detecting structure",
-  "Identifying topics",
-  "Finding concepts",
-  "Building relationships",
-  "Generating flashcards",
-  "Generating questions",
+  "Organizing passages",
+  "Saving text",
   "Complete",
 ] as const;
 export type DocumentStatus =
   | (typeof processingSteps)[number]
   | "Failed"
-  | "Uploaded"
+  | "Unsupported"
+  | "Waiting"
   | "Deleting"
   | "Delete failed";
 export type FileType =
@@ -57,6 +57,8 @@ export interface StudyDocument {
   flashcards: number;
   quizzes: number;
   extractedText: string;
+  chunkCount: number;
+  extractedAt: string | null;
   error?: string;
 }
 export interface WorkspaceState {

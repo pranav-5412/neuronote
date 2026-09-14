@@ -98,6 +98,7 @@ export async function updateDocument(input: unknown) {
       "queued",
       "complete",
       "failed",
+      "unsupported",
     ])
     .select("id")
     .single();

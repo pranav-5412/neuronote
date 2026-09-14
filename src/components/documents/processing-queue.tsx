@@ -6,7 +6,7 @@ export function ProcessingQueue({ brainId }: { brainId?: string }) {
   const { state } = useWorkspace();
   const pending = state.documents.filter(
     (doc) =>
-      !["Complete", "Uploaded"].includes(doc.status) &&
+      !["Complete", "Uploaded", "Unsupported"].includes(doc.status) &&
       (!brainId || doc.brainId === brainId),
   );
   if (!pending.length) return null;
@@ -23,7 +23,7 @@ export function ProcessingQueue({ brainId }: { brainId?: string }) {
             <Link href={`/documents?document=${doc.id}`}>{doc.name}</Link>
             <p>
               {doc.error ||
-                "Upload in progress. If interrupted, remove this document after two minutes and upload again."}
+                "NeuroNote is preparing this document. This status is saved and will survive a reload."}
             </p>
           </div>
           <StatusBadge status={doc.status} />

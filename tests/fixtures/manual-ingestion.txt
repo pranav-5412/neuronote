@@ -1,0 +1,5 @@
+Neural Communication
+
+Neurons communicate through electrical signals called action potentials. At a synapse, neurotransmitters cross the gap and bind to receptors on the next cell.
+
+Myelin helps impulses travel quickly along many axons.

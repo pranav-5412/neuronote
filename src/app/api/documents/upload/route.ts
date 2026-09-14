@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getSessionContext } from "@/lib/repositories/session";
 import { uploadDocument } from "@/lib/services/documents";
+import { processDocument } from "@/lib/ingestion/process";
 import { sameOriginRequest } from "@/lib/validation/origin";
 import { boundedFormData } from "@/lib/validation/files";
 import { failure, PublicError } from "@/lib/result";
@@ -21,8 +22,19 @@ export async function POST(request: NextRequest) {
       brainId,
       form.get("pasted") === "true",
     );
+    // Upload succeeded independently; extraction failures never remove the source.
+    let processing;
+    try {
+      processing = await processDocument(id);
+    } catch {
+      processing = {
+        status: "uploaded",
+        error:
+          "Your file was uploaded. Open it and select Process document to extract its text.",
+      };
+    }
     return NextResponse.json(
-      { ok: true, id },
+      { ok: true, id, processing },
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (error) {

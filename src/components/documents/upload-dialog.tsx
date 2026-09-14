@@ -136,7 +136,17 @@ export function UploadDialog({
           );
         setQueue((items) =>
           items.map((item) =>
-            item.id === doc.id ? { ...item, status: "Uploaded" } : item,
+            item.id === doc.id
+              ? {
+                  ...item,
+                  status:
+                    result.processing?.status === "complete"
+                      ? "Complete"
+                      : result.processing?.status === "unsupported"
+                        ? "Unsupported"
+                        : "Needs attention",
+                }
+              : item,
           ),
         );
       } catch (error) {
@@ -164,8 +174,8 @@ export function UploadDialog({
       <DialogContent className="phase-dialog upload-dialog">
         <DialogTitle>Give your ideas a starting point.</DialogTitle>
         <DialogDescription>
-          Store study material privately in your brain. Text extraction and AI
-          study tools arrive in a later phase.
+          Store study material privately in your brain. PDF, TXT, and Markdown
+          files are extracted automatically.
         </DialogDescription>
         <div className="form-stack">
           <label>

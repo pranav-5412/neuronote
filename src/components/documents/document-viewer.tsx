@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -20,15 +20,65 @@ import { EmptyPanel } from "@/components/shared/empty-panel";
 import { DocumentActions } from "./document-actions";
 import { StatusBadge } from "./status-badge";
 export function DocumentViewer({ id }: { id: string }) {
-  const { state } = useWorkspace();
+  const { state, refresh } = useWorkspace();
   const router = useRouter();
   const doc = state.documents.find((doc) => doc.id === id);
   const [page, setPage] = useState(1);
   const [zoom, setZoom] = useState(100);
-  const [tab, setTab] = useState<"preview" | "text">("preview");
+  const [tab, setTab] = useState<"preview" | "text">("text");
+  const [extractedPages, setExtractedPages] = useState<
+    Array<{ pageNumber: number | null; text: string }>
+  >([]);
+  const [textError, setTextError] = useState("");
   const [expanded, setExpanded] = useState(false);
   const viewer = useRef<HTMLDivElement>(null);
   const closeFullscreen = useRef<HTMLButtonElement>(null);
+  const activeProcessing =
+    !!doc &&
+    [
+      "Validating",
+      "Extracting text",
+      "Cleaning text",
+      "Detecting structure",
+      "Organizing passages",
+      "Saving text",
+    ].includes(doc.status);
+  useEffect(() => {
+    let alive = true;
+    async function load() {
+      try {
+        const response = await fetch(`/api/documents/${id}/extraction`, {
+          cache: "no-store",
+        });
+        const result = await response.json();
+        if (alive) {
+          if (!response.ok)
+            setTextError(result.error || "Extracted text could not be loaded.");
+          else {
+            setExtractedPages(
+              Array.isArray(result.extracted_pages)
+                ? result.extracted_pages
+                : [],
+            );
+            setTextError("");
+          }
+        }
+      } catch {
+        if (alive) setTextError("Extracted text could not be loaded.");
+      }
+    }
+    void load();
+    const timer = activeProcessing
+      ? window.setInterval(async () => {
+          await refresh();
+          await load();
+        }, 1500)
+      : undefined;
+    return () => {
+      alive = false;
+      if (timer) window.clearInterval(timer);
+    };
+  }, [id, activeProcessing, refresh]);
   if (!doc)
     return (
       <div className="section-page">
@@ -48,7 +98,12 @@ export function DocumentViewer({ id }: { id: string }) {
   );
   const topics = state.topics.filter((topic) => topic.documentId === doc.id);
   const pages = doc.pages ?? 1;
-  const ready = ["Complete", "Uploaded"].includes(doc.status);
+  const ready = !["Uploading", "Deleting", "Delete failed"].includes(
+    doc.status,
+  );
+  const textPage =
+    extractedPages.find((item) => item.pageNumber === page) ??
+    extractedPages[0];
   function toggleExpanded() {
     setExpanded((value) => !value);
     requestAnimationFrame(() => closeFullscreen.current?.focus());
@@ -163,14 +218,13 @@ export function DocumentViewer({ id }: { id: string }) {
                 </p>
                 <div className="paper-rule" />
                 <h3>
-                  {ready
-                    ? (topics[0]?.name ?? "Your study material")
+                  {doc.status === "Complete"
+                    ? "Extracted source material"
                     : "Your document, ready for a new perspective."}
                 </h3>
                 <p>
-                  This is a document preview placeholder. The original file is
-                  available to download. Rendering and text extraction arrive
-                  later.
+                  The original file remains available privately. Open Extracted
+                  text to read the source content prepared by NeuroNote.
                 </p>
                 <div className="paper-lines" aria-hidden="true">
                   <span />
@@ -192,12 +246,28 @@ export function DocumentViewer({ id }: { id: string }) {
                 className="extracted-text"
                 style={{ fontSize: `${zoom / 100}rem` }}
               >
-                <span className="inline-note">
-                  Text extraction is planned for a later phase.
-                </span>
-                <pre>
-                  Your original material is available using Download original.
-                </pre>
+                {textError ? (
+                  <p className="form-error">{textError}</p>
+                ) : textPage?.text ? (
+                  <>
+                    <span className="inline-note">
+                      {textPage.pageNumber
+                        ? `Source page ${textPage.pageNumber}`
+                        : "Extracted source text"}
+                    </span>
+                    <pre>{textPage.text}</pre>
+                  </>
+                ) : (
+                  <EmptyPanel
+                    title={doc.status}
+                    description={
+                      doc.error ||
+                      (doc.status === "Uploaded"
+                        ? "Select Process document to begin extraction."
+                        : "Extracted text will appear here when processing finishes.")
+                    }
+                  />
+                )}
               </div>
             )}
           </div>
@@ -214,7 +284,7 @@ export function DocumentViewer({ id }: { id: string }) {
                 variant="ghost"
                 size="icon"
                 aria-label="Previous page"
-                disabled={page <= 1 || tab === "text"}
+                disabled={page <= 1 || !doc.pages}
                 onClick={() => setPage((value) => value - 1)}
               >
                 <ChevronLeft />
@@ -226,7 +296,7 @@ export function DocumentViewer({ id }: { id: string }) {
                 variant="ghost"
                 size="icon"
                 aria-label="Next page"
-                disabled={page >= pages || tab === "text"}
+                disabled={page >= pages || !doc.pages}
                 onClick={() => setPage((value) => value + 1)}
               >
                 <ChevronRight />
@@ -252,7 +322,13 @@ export function DocumentViewer({ id }: { id: string }) {
               <dt>Size</dt>
               <dd>{formatSize(doc.size)}</dd>
               <dt>Pages / slides</dt>
-              <dd>{doc.pages ?? "Unknown · no parsing"}</dd>
+              <dd>{doc.pages ?? "Not applicable"}</dd>
+              <dt>Passages</dt>
+              <dd>{doc.chunkCount}</dd>
+              <dt>Extracted</dt>
+              <dd>
+                {doc.extractedAt ? formatDate(doc.extractedAt) : "Not yet"}
+              </dd>
             </dl>
           </section>
           <section>

@@ -20,7 +20,11 @@ export function brainModel(row: Tables<"brains">): Brain {
     lastStudied: null,
   };
 }
-export function documentModel(row: Tables<"documents">): StudyDocument {
+type DocumentListRow = Omit<
+  Tables<"documents">,
+  "extracted_pages" | "extraction_warnings"
+>;
+export function documentModel(row: DocumentListRow): StudyDocument {
   return {
     id: row.id,
     brainId: row.brain_id,
@@ -38,13 +42,22 @@ export function documentModel(row: Tables<"documents">): StudyDocument {
         delete_failed: "Delete failed",
         queued: "Waiting",
         processing: "Waiting",
+        validating: "Validating",
+        extracting: "Extracting text",
+        cleaning: "Cleaning text",
+        structuring: "Detecting structure",
+        chunking: "Organizing passages",
+        saving: "Saving text",
         complete: "Complete",
         failed: "Failed",
+        unsupported: "Unsupported",
       } as const
     )[row.processing_status],
     flashcards: 0,
     quizzes: 0,
     extractedText: "",
+    chunkCount: row.chunk_count,
+    extractedAt: row.extracted_at,
     error: row.processing_error ?? undefined,
   };
 }
@@ -59,7 +72,9 @@ export async function getWorkspace(): Promise<WorkspaceSnapshot> {
       .order("created_at", { ascending: false }),
     client
       .from("documents")
-      .select("*")
+      .select(
+        "id,user_id,brain_id,original_filename,display_name,file_type,mime_type,file_size,storage_path,page_count,processing_status,processing_progress,processing_error,processing_run_id,processing_started_at,extracted_character_count,chunk_count,extracted_at,extraction_version,created_at,updated_at",
+      )
       .eq("user_id", user.id)
       .order("created_at", { ascending: false }),
   ]);

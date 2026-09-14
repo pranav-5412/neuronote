@@ -3,6 +3,7 @@ import { getSessionContext } from "@/lib/repositories/session";
 import { PublicError } from "@/lib/result";
 import { uuid } from "@/lib/validation/input";
 import { validateFile } from "@/lib/validation/files";
+import { INGESTION } from "@/lib/ingestion/config";
 const bucket = "study-documents";
 export async function uploadDocument(
   file: File,
@@ -104,6 +105,15 @@ export async function deleteDocument(input: unknown) {
   if (error)
     throw new PublicError("We couldn’t load this document. Try again.", 503);
   if (!doc) return;
+  if (
+    doc.processing_run_id &&
+    doc.processing_started_at &&
+    Date.now() - Date.parse(doc.processing_started_at) < INGESTION.leaseMs
+  )
+    throw new PublicError(
+      "Text extraction is in progress. Wait for it to finish before deleting.",
+      409,
+    );
   // Interrupted uploads remain recoverable; do not race an active upload request.
   if (
     doc.processing_status === "uploading" &&
@@ -166,7 +176,7 @@ export async function documentDownload(id: string) {
   if (error || !doc)
     throw new PublicError("This document is not available.", 404);
   if (
-    !["uploaded", "queued", "processing", "complete", "failed"].includes(
+    ["uploading", "upload_failed", "deleting", "delete_failed"].includes(
       doc.processing_status,
     )
   )

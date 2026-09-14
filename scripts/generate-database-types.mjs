@@ -21,6 +21,7 @@ const map = {
   numeric: "number",
   bool: "boolean",
   jsonb: "Json",
+  _text: "string[]",
 };
 let output =
   "// Generated from supabase/migrations by npm run db:types. Do not edit.\nexport type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];\nexport type Database = { public: { Tables: {\n";
@@ -72,8 +73,15 @@ for (const { table_name: name } of tables) {
       .join(",") +
     "];\n};\n";
 }
-output +=
-  "}; Views: { [_ in never]: never }; Functions: { [_ in never]: never }; Enums: {\n";
+output += "}; Views: { [_ in never]: never }; Functions: {\n";
+const functions = (
+  await db.query(
+    `select p.proname, p.proargnames, array(select t.typname from unnest(p.proargtypes) with ordinality a(id,ord) join pg_type t on t.oid=a.id order by ord) argtypes from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.prorettype='void'::regtype and p.proname='complete_document_extraction'`,
+  )
+).rows;
+for (const fn of functions)
+  output += `${fn.proname}: { Args: { ${fn.proargnames.map((name, i) => `${name}: ${map[fn.argtypes[i]]}`).join(";")} }; Returns: undefined };\n`;
+output += "}; Enums: {\n";
 for (const e of enums) output += `${e.name}: ${e.values};\n`;
 output +=
   '}; CompositeTypes: { [_ in never]: never }; }; };\nexport type Tables<T extends keyof Database["public"]["Tables"]> = Database["public"]["Tables"][T]["Row"];\n';

@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, RefreshCw, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -18,8 +18,10 @@ export function DocumentActions({
   document: StudyDocument;
   onDelete?: () => void;
 }) {
-  const { state, dispatch, busy } = useWorkspace();
-  const [action, setAction] = useState<"edit" | "delete" | null>(null);
+  const { state, dispatch, busy, refresh } = useWorkspace();
+  const [action, setAction] = useState<"edit" | "delete" | "reprocess" | null>(
+    null,
+  );
   const [name, setName] = useState(doc.name);
   const [brainId, setBrainId] = useState(doc.brainId);
   const [error, setError] = useState("");
@@ -51,6 +53,16 @@ export function DocumentActions({
   return (
     <>
       <div className="document-actions">
+        {!["Uploading", "Deleting", "Unsupported"].includes(doc.status) && (
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label={`${doc.extractedAt ? "Reprocess" : "Process"} ${doc.name}`}
+            onClick={() => setAction("reprocess")}
+          >
+            <RefreshCw />
+          </Button>
+        )}
         <Button
           variant="ghost"
           size="icon"
@@ -127,6 +139,40 @@ export function DocumentActions({
           </form>
         </DialogContent>
       </Dialog>
+      <ConfirmDialog
+        open={action === "reprocess"}
+        onOpenChange={(open) => {
+          if (!open) setAction(null);
+        }}
+        title={
+          doc.extractedAt
+            ? "Reprocess this document?"
+            : "Process this document?"
+        }
+        description={
+          doc.extractedAt
+            ? "NeuroNote will extract the source again. Your current text and passages stay available if the new attempt fails."
+            : "NeuroNote will extract the source and organize it into traceable passages."
+        }
+        label={doc.extractedAt ? "Reprocess" : "Process"}
+        onConfirm={async () => {
+          try {
+            const response = await fetch(`/api/documents/${doc.id}/process`, {
+              method: "POST",
+            });
+            const result = await response.json();
+            await refresh();
+            if (!response.ok || result.status === "failed") {
+              setError(result.error || "Processing failed.");
+              return false;
+            }
+            return true;
+          } catch {
+            setError("Connection interrupted during processing.");
+            return false;
+          }
+        }}
+      />
       <ConfirmDialog
         open={action === "delete"}
         onOpenChange={(open) => {

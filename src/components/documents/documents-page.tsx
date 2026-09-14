@@ -174,8 +174,16 @@ export function DocumentLibrary({
             >
               <option value="all">Any status</option>
               {[
+                "Complete",
                 "Uploaded",
                 "Uploading",
+                "Validating",
+                "Extracting text",
+                "Cleaning text",
+                "Detecting structure",
+                "Organizing passages",
+                "Saving text",
+                "Unsupported",
                 "Failed",
                 "Deleting",
                 "Delete failed",

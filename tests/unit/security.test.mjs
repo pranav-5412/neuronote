@@ -170,6 +170,80 @@ test("other users cannot read, overwrite, delete, or insert into another storage
     ),
   ).rejects.toThrow();
 });
+test("extraction replacement is atomic, idempotent, and owner-scoped", async () => {
+  await asUser();
+  const run = "33333333-3333-4333-8333-333333333333";
+  const pages = [{ pageNumber: null, text: "Cell membrane source text" }];
+  const chunks = [
+    {
+      ordinal: 0,
+      content: "Cell membrane source text",
+      page_start: null,
+      page_end: null,
+      token_count: 6,
+      section_title: "Cells",
+      heading_path: ["Cells"],
+    },
+  ];
+  await db.query(
+    "update documents set processing_status='saving',processing_run_id=$1,processing_started_at=now() where id=$2",
+    [run, doc],
+  );
+  await db.query(
+    "select complete_document_extraction($1,$2,$3,$4,'1','[]'::jsonb)",
+    [doc, run, JSON.stringify(pages), JSON.stringify(chunks)],
+  );
+  expect(
+    (
+      await db.query(
+        "select chunk_count,processing_status from documents where id=$1",
+        [doc],
+      )
+    ).rows[0],
+  ).toEqual({ chunk_count: 1, processing_status: "complete" });
+  expect(
+    (
+      await db.query(
+        "select content from document_chunks where document_id=$1",
+        [doc],
+      )
+    ).rows,
+  ).toEqual([{ content: "Cell membrane source text" }]);
+
+  const second = "44444444-4444-4444-8444-444444444444";
+  await db.query(
+    "update documents set processing_status='saving',processing_run_id=$1,processing_started_at=now() where id=$2",
+    [second, doc],
+  );
+  const invalid = [{ ...chunks[0], ordinal: 2, content: "replacement" }];
+  await expect(
+    db.query(
+      "select complete_document_extraction($1,$2,$3,$4,'1','[]'::jsonb)",
+      [doc, second, JSON.stringify(pages), JSON.stringify(invalid)],
+    ),
+  ).rejects.toThrow();
+  expect(
+    (
+      await db.query(
+        "select content from document_chunks where document_id=$1",
+        [doc],
+      )
+    ).rows,
+  ).toEqual([{ content: "Cell membrane source text" }]);
+
+  await asUser(b);
+  await expect(
+    db.query(
+      "select complete_document_extraction($1,$2,$3,$4,'1','[]'::jsonb)",
+      [doc, second, JSON.stringify(pages), JSON.stringify(chunks)],
+    ),
+  ).rejects.toThrow();
+  await asUser();
+  await db.query(
+    "update documents set processing_status='complete',processing_run_id=null,processing_started_at=null where id=$1",
+    [doc],
+  );
+});
 test("metadata deletion and nonempty brain deletion are blocked", async () => {
   await asUser();
   await expect(
@@ -220,7 +294,7 @@ test("ordered storage cleanup permits deletion, retaining human notes and cascad
     [a, record.brain_id, doc],
   );
   await db.query(
-    "insert into document_chunks(user_id,document_id,ordinal,content) values($1,$2,0,'Chunk')",
+    "insert into document_chunks(user_id,document_id,ordinal,content) values($1,$2,1,'Chunk')",
     [a, doc],
   );
   await db.query(

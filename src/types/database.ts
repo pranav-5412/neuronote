@@ -178,6 +178,9 @@ export type Database = {
           token_count: number | null;
           created_at: string;
           updated_at: string;
+          section_title: string | null;
+          heading_path: string[];
+          character_count: number;
         };
         Insert: {
           id?: string;
@@ -190,6 +193,9 @@ export type Database = {
           token_count?: number | null;
           created_at?: string;
           updated_at?: string;
+          section_title?: string | null;
+          heading_path?: string[];
+          character_count?: number;
         };
         Update: {
           id?: string;
@@ -202,6 +208,9 @@ export type Database = {
           token_count?: number | null;
           created_at?: string;
           updated_at?: string;
+          section_title?: string | null;
+          heading_path?: string[];
+          character_count?: number;
         };
         Relationships: [
           {
@@ -237,6 +246,14 @@ export type Database = {
           processing_error: string | null;
           created_at: string;
           updated_at: string;
+          processing_run_id: string | null;
+          processing_started_at: string | null;
+          extracted_pages: Json;
+          extracted_character_count: number;
+          chunk_count: number;
+          extracted_at: string | null;
+          extraction_version: string | null;
+          extraction_warnings: Json;
         };
         Insert: {
           id?: string;
@@ -254,6 +271,14 @@ export type Database = {
           processing_error?: string | null;
           created_at?: string;
           updated_at?: string;
+          processing_run_id?: string | null;
+          processing_started_at?: string | null;
+          extracted_pages?: Json;
+          extracted_character_count?: number;
+          chunk_count?: number;
+          extracted_at?: string | null;
+          extraction_version?: string | null;
+          extraction_warnings?: Json;
         };
         Update: {
           id?: string;
@@ -271,6 +296,14 @@ export type Database = {
           processing_error?: string | null;
           created_at?: string;
           updated_at?: string;
+          processing_run_id?: string | null;
+          processing_started_at?: string | null;
+          extracted_pages?: Json;
+          extracted_character_count?: number;
+          chunk_count?: number;
+          extracted_at?: string | null;
+          extraction_version?: string | null;
+          extraction_warnings?: Json;
         };
         Relationships: [
           {
@@ -691,7 +724,19 @@ export type Database = {
       };
     };
     Views: { [_ in never]: never };
-    Functions: { [_ in never]: never };
+    Functions: {
+      complete_document_extraction: {
+        Args: {
+          p_document_id: string;
+          p_run_id: string;
+          p_pages: Json;
+          p_chunks: Json;
+          p_version: string;
+          p_warnings: Json;
+        };
+        Returns: undefined;
+      };
+    };
     Enums: {
       document_file_type:
         "PDF" | "DOCX" | "PPTX" | "TXT" | "Markdown" | "Image" | "Pasted text";
@@ -704,7 +749,14 @@ export type Database = {
         | "queued"
         | "processing"
         | "complete"
-        | "failed";
+        | "failed"
+        | "validating"
+        | "extracting"
+        | "cleaning"
+        | "structuring"
+        | "chunking"
+        | "saving"
+        | "unsupported";
     };
     CompositeTypes: { [_ in never]: never };
   };

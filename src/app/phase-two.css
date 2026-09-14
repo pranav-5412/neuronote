@@ -733,6 +733,24 @@
   background: var(--primary);
   transition: width 0.5s ease;
 }
+.processing-progress > .indeterminate {
+  width: 38%;
+  animation: document-stage-progress 1.35s ease-in-out infinite;
+}
+@keyframes document-stage-progress {
+  from {
+    transform: translateX(-110%);
+  }
+  to {
+    transform: translateX(290%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .processing-progress > .indeterminate {
+    animation: none;
+    transform: translateX(80%);
+  }
+}
 .upload-dialog {
   width: calc(100% - 2rem);
   max-width: 560px;

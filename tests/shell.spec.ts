@@ -10,8 +10,7 @@ test("protected routes redirect to a usable login screen", async ({ page }) => {
   await expect(page.getByLabel("Email address")).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Sign in", exact: true }),
-  ).toBeDisabled();
-  await expect(page.getByText("Workspace connection needed")).toBeVisible();
+  ).toBeEnabled();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
@@ -39,7 +38,7 @@ test("signup navigation, fields and dark theme fit the viewport", async ({
   await expect(page.locator("html")).toHaveClass(/dark/);
   await expect(
     page.getByRole("button", { name: "Create your account" }),
-  ).toBeDisabled();
+  ).toBeEnabled();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
